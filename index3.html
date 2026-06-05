@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>游泳競賽管理系統</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:#0a1628; --navy2:#112240; --teal:#00b4d8; --teal2:#0077b6;
+  --gold:#e9c46a; --silver:#a8dadc; --white:#f8f9fa; --gray:#8899aa;
+  --danger:#e63946; --success:#2dc653; --warn:#f4a261;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--navy);color:var(--white);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 58px,rgba(0,180,216,.06) 58px,rgba(0,180,216,.06) 60px),linear-gradient(180deg,#0a1628 0%,#0d2137 50%,#0a1628 100%);pointer-events:none;z-index:0;}
+
+/* ── Login ── */
+.login-wrap{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:rgba(10,22,40,.97);backdrop-filter:blur(8px);}
+.login-box{background:rgba(17,34,64,.9);border:1px solid rgba(0,180,216,.25);border-radius:16px;padding:2.5rem;width:360px;max-width:90vw;}
+.login-logo{text-align:center;margin-bottom:2rem;}
+.login-logo-title{font-family:'Noto Serif TC',serif;font-size:1.4rem;font-weight:700;color:var(--teal);letter-spacing:.08em;}
+.login-logo-sub{font-size:.78rem;color:var(--gray);margin-top:.3rem;}
+.login-tabs{display:flex;gap:0;margin-bottom:1.5rem;border:1px solid rgba(0,180,216,.2);border-radius:8px;overflow:hidden;}
+.login-tab{flex:1;padding:.55rem;text-align:center;cursor:pointer;font-size:.82rem;color:var(--gray);transition:all .2s;}
+.login-tab.active{background:rgba(0,180,216,.15);color:var(--teal);font-weight:600;}
+.login-error{background:rgba(230,57,70,.12);border:1px solid rgba(230,57,70,.3);border-radius:6px;padding:.6rem .9rem;font-size:.82rem;color:var(--danger);margin-bottom:1rem;}
+.login-hint{font-size:.75rem;color:var(--gray);margin-top:1.25rem;text-align:center;line-height:1.7;}
+.login-hint code{font-family:'JetBrains Mono',monospace;color:var(--silver);background:rgba(0,0,0,.3);padding:.1rem .3rem;border-radius:3px;}
+
+/* ── Nav ── */
+.nav{position:sticky;top:0;z-index:100;background:rgba(10,22,40,.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(0,180,216,.2);padding:0 1.5rem;display:flex;align-items:center;gap:0;}
+.nav-logo{font-family:'Noto Serif TC',serif;font-size:1rem;font-weight:700;color:var(--teal);padding:1rem 1.25rem 1rem 0;border-right:1px solid rgba(0,180,216,.2);margin-right:1.25rem;white-space:nowrap;letter-spacing:.05em;}
+.nav-tabs{display:flex;gap:0;flex:1;overflow-x:auto;}
+.nav-tab{padding:.85rem 1.2rem;cursor:pointer;font-size:.82rem;font-weight:500;color:var(--gray);border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
+.nav-tab:hover{color:var(--white);}
+.nav-tab.active{color:var(--teal);border-bottom-color:var(--teal);}
+.nav-count{display:inline-flex;align-items:center;justify-content:center;background:var(--teal2);color:#fff;font-size:.62rem;font-weight:700;min-width:17px;height:17px;border-radius:9px;padding:0 3px;margin-left:5px;font-family:'JetBrains Mono',monospace;}
+.nav-right{display:flex;gap:.5rem;align-items:center;padding-left:1rem;flex-shrink:0;}
+.user-pill{display:flex;align-items:center;gap:.5rem;padding:.3rem .75rem;background:rgba(0,180,216,.1);border:1px solid rgba(0,180,216,.2);border-radius:20px;font-size:.78rem;}
+.user-role{font-size:.68rem;color:var(--gray);}
+.user-role.admin{color:var(--gold);}
+.user-role.coach{color:var(--silver);}
+
+/* ── Main ── */
+.main{position:relative;z-index:1;padding:1.5rem 2rem;max-width:1400px;margin:0 auto;}
+
+/* ── Card ── */
+.card{background:rgba(17,34,64,.7);border:1px solid rgba(0,180,216,.15);border-radius:12px;padding:1.5rem;backdrop-filter:blur(8px);margin-bottom:1rem;}
+.card-title{font-family:'Noto Serif TC',serif;font-size:.95rem;font-weight:600;color:var(--teal);margin-bottom:1.25rem;padding-bottom:.6rem;border-bottom:1px solid rgba(0,180,216,.15);letter-spacing:.05em;}
+
+/* ── Form ── */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1rem;}
+.form-group{display:flex;flex-direction:column;gap:.35rem;}
+.form-label{font-size:.76rem;color:var(--gray);font-weight:500;letter-spacing:.04em;}
+.form-input,.form-select{background:rgba(10,22,40,.8);border:1px solid rgba(0,180,216,.2);border-radius:6px;padding:.58rem .85rem;color:var(--white);font-size:.86rem;font-family:'Noto Sans TC',sans-serif;outline:none;transition:border-color .2s;}
+.form-input:focus,.form-select:focus{border-color:var(--teal);}
+.form-select option{background:var(--navy2);}
+.form-input::placeholder{color:var(--gray);}
+.field-err{color:var(--danger);font-size:.72rem;}
+
+/* ── Btn ── */
+.btn{padding:.58rem 1.1rem;border-radius:6px;border:none;cursor:pointer;font-size:.83rem;font-weight:500;font-family:'Noto Sans TC',sans-serif;transition:all .2s;display:inline-flex;align-items:center;gap:.45rem;letter-spacing:.03em;}
+.btn-primary{background:var(--teal);color:var(--navy);}
+.btn-primary:hover{background:#00caf0;transform:translateY(-1px);}
+.btn-secondary{background:rgba(0,180,216,.12);color:var(--teal);border:1px solid rgba(0,180,216,.3);}
+.btn-secondary:hover{background:rgba(0,180,216,.22);}
+.btn-danger{background:rgba(230,57,70,.15);color:var(--danger);border:1px solid rgba(230,57,70,.3);}
+.btn-danger:hover{background:rgba(230,57,70,.25);}
+.btn-gold{background:var(--gold);color:var(--navy);font-weight:700;}
+.btn-gold:hover{background:#f0d080;transform:translateY(-1px);}
+.btn-warn{background:rgba(244,162,97,.15);color:var(--warn);border:1px solid rgba(244,162,97,.3);}
+.btn-sm{padding:.38rem .75rem;font-size:.76rem;}
+.btn-row{display:flex;gap:.65rem;flex-wrap:wrap;margin-top:1rem;}
+
+/* ── Chips ── */
+.items-grid{display:flex;flex-wrap:wrap;gap:.45rem;}
+.item-chip{padding:.32rem .75rem;border-radius:20px;border:1px solid rgba(0,180,216,.25);background:rgba(10,22,40,.6);color:var(--gray);font-size:.76rem;cursor:pointer;transition:all .2s;user-select:none;}
+.item-chip.selected{background:rgba(0,180,216,.2);border-color:var(--teal);color:var(--teal);}
+.item-chip.disabled{opacity:.4;cursor:not-allowed;}
+
+/* ── Time ── */
+.time-row{display:flex;gap:.5rem;align-items:center;margin-top:.35rem;}
+.time-label{font-size:.74rem;color:var(--gray);width:125px;flex-shrink:0;}
+.time-input{width:90px;}
+
+/* ── Table ── */
+.tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid rgba(0,180,216,.12);}
+table{width:100%;border-collapse:collapse;font-size:.82rem;}
+th{background:rgba(0,180,216,.1);color:var(--teal);font-weight:600;padding:.65rem .9rem;text-align:left;letter-spacing:.04em;font-size:.73rem;white-space:nowrap;}
+td{padding:.6rem .9rem;border-top:1px solid rgba(0,180,216,.07);color:rgba(248,249,250,.85);vertical-align:middle;}
+tr:hover td{background:rgba(0,180,216,.04);}
+.badge{display:inline-block;padding:.18rem .5rem;border-radius:4px;font-size:.7rem;font-weight:600;font-family:'JetBrains Mono',monospace;}
+.badge-m{background:rgba(0,119,182,.25);color:#48cae4;}
+.badge-f{background:rgba(233,196,106,.2);color:var(--gold);}
+.badge-admin{background:rgba(233,196,106,.2);color:var(--gold);}
+.badge-coach{background:rgba(168,218,220,.15);color:var(--silver);}
+
+/* ── Heats ── */
+.heat-block{margin-bottom:1.75rem;}
+.heat-header{display:flex;align-items:center;gap:1rem;padding:.55rem 1rem;background:rgba(0,180,216,.1);border-radius:8px 8px 0 0;border:1px solid rgba(0,180,216,.2);border-bottom:none;}
+.heat-title{font-family:'Noto Serif TC',serif;font-weight:600;font-size:.88rem;}
+.heat-meta{font-size:.73rem;color:var(--gray);}
+.lane-table{border-radius:0 0 8px 8px;border:1px solid rgba(0,180,216,.2);}
+.lane-num{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--teal);font-size:.95rem;text-align:center;width:48px;}
+.lane-center{background:rgba(0,180,216,.06);}
+.result-input{background:rgba(10,22,40,.8);border:1px solid rgba(0,180,216,.15);border-radius:4px;padding:.28rem .55rem;color:var(--white);font-family:'JetBrains Mono',monospace;font-size:.8rem;width:88px;outline:none;}
+.result-input:focus{border-color:var(--teal);}
+
+/* ── Stats ── */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.85rem;margin-bottom:1.25rem;}
+.stat-box{background:rgba(17,34,64,.6);border:1px solid rgba(0,180,216,.15);border-radius:10px;padding:.9rem;text-align:center;}
+.stat-num{font-family:'JetBrains Mono',monospace;font-size:1.7rem;font-weight:700;color:var(--teal);}
+.stat-label{font-size:.7rem;color:var(--gray);margin-top:.2rem;letter-spacing:.04em;}
+
+/* ── Section ── */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.65rem;}
+.section-title{font-family:'Noto Serif TC',serif;font-size:1rem;font-weight:700;letter-spacing:.05em;}
+
+/* ── Filter ── */
+.filter-bar{display:flex;gap:.65rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center;}
+.filter-select{background:rgba(10,22,40,.8);border:1px solid rgba(0,180,216,.2);border-radius:6px;padding:.42rem .75rem;color:var(--white);font-size:.8rem;font-family:'Noto Sans TC',sans-serif;outline:none;}
+
+/* ── Account mgmt ── */
+.account-row{display:flex;align-items:center;gap:.75rem;padding:.7rem 0;border-bottom:1px solid rgba(0,180,216,.07);}
+.account-row:last-child{border-bottom:none;}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:2rem;right:2rem;z-index:9999;padding:.7rem 1.1rem;border-radius:8px;font-weight:600;font-size:.83rem;animation:fadeUp .3s ease;}
+.toast-ok{background:var(--success);color:var(--navy);}
+.toast-err{background:var(--danger);color:#fff;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── Empty ── */
+.empty{text-align:center;padding:3rem 1rem;color:var(--gray);}
+.empty-icon{font-size:2.8rem;margin-bottom:.75rem;opacity:.4;}
+
+/* ── Readonly overlay ── */
+.readonly-banner{background:rgba(244,162,97,.1);border:1px solid rgba(244,162,97,.25);border-radius:8px;padding:.65rem 1rem;font-size:.82rem;color:var(--warn);margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;}
+
+/* ── Print ── */
+@media print{
+  body{background:#fff;color:#000;}body::before{display:none;}
+  .nav,.no-print{display:none!important;}
+  .main{padding:0;max-width:none;}
+  .card{background:#fff;border:1px solid #ccc;}
+  .card-title{color:#0077b6;}
+  th{background:#e0f4ff;color:#0077b6;}td{color:#111;}
+  .heat-header{background:#e0f4ff;}
+  .heat-block{page-break-inside:avoid;}
+  table{font-size:11pt;}
+  .result-input{border:1px solid #ccc;background:#fff;color:#000;}
+  .tbl-wrap{border:1px solid #ccc;}
+  .login-wrap{display:none!important;}
+}
+@media(max-width:640px){.main{padding:1rem;}.form-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+// ═══════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════
+const GROUPS = ['國小甲組(11-12歲)','國小乙組(9-10歲)','國中男女生組','高中男女生組','公開組'];
+const EVENTS = [
+  '50M 自由式','100M 自由式','200M 自由式','400M 自由式',
+  '50M 蝶式','100M 蝶式','50M 仰式','100M 仰式',
+  '50M 蛙式','100M 蛙式','200M 個人混合式','400M 個人混合式',
+  '4×50M 自由式接力','4×100M 自由式接力','4×50M 混合式接力'
+];
+const LANES=[1,2,3,4,5,6,7,8];
+const LANE_ORDER=[4,5,3,6,2,7,1,8];
+const LS = {
+  athletes:   'swim_athletes',
+  results:    'swim_results',
+  accounts:   'swim_accounts',
+  inviteCode: 'swim_invite_code',
+};
+const DEFAULT_INVITE_CODE = 'SWIM2025';
+
+// Default accounts – admin + two sample coaches
+// password stored as plain text (suitable for offline single-device use)
+const DEFAULT_ACCOUNTS = [
+  { id:'admin', username:'admin', password:'Admin1234', role:'admin', unit:'主辦單位', display:'系統管理員' },
+  { id:'coach_demo1', username:'coach01', password:'Coach0001', role:'coach', unit:'示範國小', display:'示範國小教練' },
+  { id:'coach_demo2', username:'coach02', password:'Coach0002', role:'coach', unit:'模範國中', display:'模範國中教練' },
+];
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+function lsGet(key, fallback) {
+  try { const v=localStorage.getItem(key); return v!==null?JSON.parse(v):fallback; }
+  catch { return fallback; }
+}
+function lsSet(key, val) { try { localStorage.setItem(key,JSON.stringify(val)); } catch{} }
+
+function parseTime(str){
+  if(!str||str.trim()==='') return Infinity;
+  const s=str.trim().replace("'",':').replace('"','');
+  const p=s.split(':');
+  return p.length===2 ? parseFloat(p[0])*60+parseFloat(p[1]) : (parseFloat(s)||Infinity);
+}
+function buildHeats(athletes){
+  const map={};
+  athletes.forEach(a=>{
+    a.items.forEach(item=>{
+      const key=`${a.gender}｜${a.group}｜${item}`;
+      if(!map[key]) map[key]={gender:a.gender,group:a.group,event:item,entries:[]};
+      map[key].entries.push({athleteId:a.id,name:a.name,unit:a.unit,refTime:a.times[item]||'',refSec:parseTime(a.times[item]||'')});
+    });
+  });
+  const heats=[];
+  Object.values(map).forEach(({gender,group,event,entries})=>{
+    const sorted=[...entries].sort((a,b)=>a.refSec-b.refSec);
+    let h=0;
+    while(h*8<sorted.length){
+      const batch=sorted.slice(h*8,(h+1)*8);
+      const laneAssign={};
+      [...batch].sort((a,b)=>a.refSec-b.refSec).forEach((e,i)=>{laneAssign[e.name+'|'+e.unit]=LANE_ORDER[i];});
+      heats.push({gender,group,event,heatNum:h+1,totalHeats:Math.ceil(sorted.length/8),entries:batch,laneAssign});
+      h++;
+    }
+  });
+  heats.sort((a,b)=>{
+    if(a.gender!==b.gender) return a.gender.localeCompare(b.gender);
+    if(a.group!==b.group) return a.group.localeCompare(b.group);
+    const ei=EVENTS.indexOf(a.event)-EVENTS.indexOf(b.event);
+    return ei||a.heatNum-b.heatNum;
+  });
+  return heats;
+}
+function heatId(h){return `${h.gender}|${h.group}|${h.event}|${h.heatNum}`;}
+
+// ═══════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════
+function Toast({msg,type='ok',onDone}){
+  useEffect(()=>{const t=setTimeout(onDone,2300);return()=>clearTimeout(t);},[]);
+  return <div className={`toast toast-${type}`}>{type==='ok'?'✓':'✕'} {msg}</div>;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOGIN  (登入 + 教練自助註冊)
+// ═══════════════════════════════════════════════════════════════
+function LoginScreen({accounts,setAccounts,inviteCode,onLogin}){
+  const [tab,setTab]=useState('coach'); // 'coach' | 'register' | 'admin'
+  // login fields
+  const [u,setU]=useState('');
+  const [p,setP]=useState('');
+  // register fields
+  const [rForm,setRForm]=useState({username:'',password:'',password2:'',unit:'',display:'',inviteInput:''});
+  const [err,setErr]=useState('');
+  const [regOk,setRegOk]=useState(false);
+
+  const switchTab=t=>{setTab(t);setErr('');setRegOk(false);};
+
+  // ── Login submit ──
+  const submit=()=>{
+    const acc=accounts.find(a=>a.username===u.trim()&&a.password===p);
+    if(!acc){setErr('帳號或密碼錯誤');return;}
+    if(tab==='admin'&&acc.role!=='admin'){setErr('此帳號無管理員權限');return;}
+    if(tab==='coach'&&acc.role!=='coach'){setErr('請使用管理員登入頁');return;}
+    onLogin(acc);
+  };
+  const onKey=e=>e.key==='Enter'&&submit();
+
+  // ── Register submit ──
+  const rf=rForm;
+  const submitReg=()=>{
+    setErr('');
+    if(!rf.inviteInput.trim()){setErr('請輸入邀請碼');return;}
+    if(rf.inviteInput.trim()!==inviteCode){setErr('邀請碼錯誤，請向主辦單位確認');return;}
+    if(!rf.username.trim()||rf.username.length<4){setErr('帳號至少 4 個字元');return;}
+    if(accounts.find(a=>a.username===rf.username.trim())){setErr('此帳號已被使用，請換一個');return;}
+    if(!rf.password||rf.password.length<6){setErr('密碼至少 6 碼');return;}
+    if(rf.password!==rf.password2){setErr('兩次密碼不一致');return;}
+    if(!rf.unit.trim()){setErr('請填寫單位名稱');return;}
+    if(!rf.display.trim()){setErr('請填寫顯示名稱');return;}
+    const newAcc={id:'u_'+Date.now(),username:rf.username.trim(),password:rf.password,
+      role:'coach',unit:rf.unit.trim(),display:rf.display.trim()};
+    setAccounts(prev=>[...prev,newAcc]);
+    setRegOk(true);
+    setRForm({username:'',password:'',password2:'',unit:'',display:'',inviteInput:''});
+  };
+  const rKey=e=>e.key==='Enter'&&submitReg();
+
+  const fg=(label,key,opts={})=>(
+    <div className="form-group" style={{marginBottom:'.8rem'}}>
+      <label className="form-label">{label}</label>
+      <input className="form-input"
+        type={opts.type||'text'}
+        placeholder={opts.ph||''}
+        value={rForm[key]}
+        onChange={e=>setRForm(p=>({...p,[key]:e.target.value}))}
+        onKeyDown={rKey}/>
+    </div>
+  );
+
+  return (
+    <div className="login-wrap">
+      <div className="login-box" style={{width:tab==='register'?420:360}}>
+        <div className="login-logo">
+          <div style={{fontSize:'2rem',marginBottom:'.4rem'}}>🏊‍♂️</div>
+          <div className="login-logo-title">游泳競賽管理系統</div>
+          <div className="login-logo-sub">Swimming Meet Manager</div>
+        </div>
+
+        {/* Tabs */}
+        <div className="login-tabs" style={{marginBottom:'1.25rem'}}>
+          <div className={`login-tab${tab==='coach'?' active':''}`}    onClick={()=>switchTab('coach')}>教練登入</div>
+          <div className={`login-tab${tab==='register'?' active':''}`} onClick={()=>switchTab('register')}>申請帳號</div>
+          <div className={`login-tab${tab==='admin'?' active':''}`}    onClick={()=>switchTab('admin')}>管理員</div>
+        </div>
+
+        {err && <div className="login-error">⚠ {err}</div>}
+
+        {/* ── Coach Login ── */}
+        {(tab==='coach'||tab==='admin') && <>
+          <div className="form-group" style={{marginBottom:'.8rem'}}>
+            <label className="form-label">帳號</label>
+            <input className="form-input" placeholder={tab==='admin'?'管理員帳號':'教練帳號'}
+              value={u} onChange={e=>setU(e.target.value)} onKeyDown={onKey} autoFocus/>
+          </div>
+          <div className="form-group" style={{marginBottom:'1.2rem'}}>
+            <label className="form-label">密碼</label>
+            <input className="form-input" type="password" placeholder="密碼"
+              value={p} onChange={e=>setP(e.target.value)} onKeyDown={onKey}/>
+          </div>
+          <button className="btn btn-primary" style={{width:'100%',justifyContent:'center'}} onClick={submit}>登入</button>
+          <div className="login-hint">
+            {tab==='admin'
+              ? <>預設管理員帳號 <code>admin</code> ／ 密碼 <code>Admin1234</code><br/>請登入後至帳號管理修改密碼與邀請碼</>
+              : <>還沒有帳號？點「申請帳號」自助註冊</>}
+          </div>
+        </>}
+
+        {/* ── Self Register ── */}
+        {tab==='register' && <>
+          {regOk
+            ? <div style={{textAlign:'center',padding:'1.5rem 0'}}>
+                <div style={{fontSize:'2.5rem',marginBottom:'.75rem'}}>✅</div>
+                <div style={{color:'var(--success)',fontWeight:600,marginBottom:'.5rem'}}>帳號申請成功！</div>
+                <div style={{color:'var(--gray)',fontSize:'.82rem',marginBottom:'1.25rem'}}>請切換到「教練登入」使用您的帳號密碼登入</div>
+                <button className="btn btn-primary" style={{width:'100%',justifyContent:'center'}} onClick={()=>switchTab('coach')}>前往登入</button>
+              </div>
+            : <>
+                {/* Invite code – highlighted at top */}
+                <div style={{background:'rgba(233,196,106,.08)',border:'1px solid rgba(233,196,106,.25)',borderRadius:8,padding:'.75rem 1rem',marginBottom:'1rem'}}>
+                  <div style={{fontSize:'.72rem',color:'var(--gold)',fontWeight:600,marginBottom:'.4rem',letterSpacing:'.05em'}}>🔑 邀請碼（由主辦單位提供）</div>
+                  <input className="form-input" placeholder="輸入邀請碼"
+                    value={rForm.inviteInput} onChange={e=>setRForm(p=>({...p,inviteInput:e.target.value}))}
+                    onKeyDown={rKey}
+                    style={{borderColor:'rgba(233,196,106,.35)'}}/>
+                </div>
+                <div className="form-grid" style={{gridTemplateColumns:'1fr 1fr',gap:'.65rem',marginBottom:0}}>
+                  <div>{fg('帳號 * （至少4碼）','username',{ph:'自訂登入帳號'})}</div>
+                  <div>{fg('顯示名稱 *','display',{ph:'如：○○國小教練'})}</div>
+                  <div style={{gridColumn:'1/-1'}}>{fg('單位名稱 * （請填正式全名）','unit',{ph:'○○國民小學'})}</div>
+                  <div>{fg('密碼 * （至少6碼）','password',{type:'password',ph:'密碼'})}</div>
+                  <div>{fg('再次確認密碼','password2',{type:'password',ph:'相同密碼'})}</div>
+                </div>
+                <button className="btn btn-primary" style={{width:'100%',justifyContent:'center',marginTop:'.75rem'}} onClick={submitReg}>
+                  申請教練帳號
+                </button>
+                <div className="login-hint">帳號申請後即可直接登入，無需等待審核</div>
+              </>
+          }
+        </>}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ACCOUNT MANAGEMENT (admin only)
+// ═══════════════════════════════════════════════════════════════
+function AccountMgmt({accounts,setAccounts,currentUser,showToast,inviteCode,setInviteCode}){
+  const [form,setForm]=useState({username:'',password:'',role:'coach',unit:'',display:''});
+  const [editId,setEditId]=useState(null);
+  const [errors,setErrors]=useState({});
+  const [codeInput,setCodeInput]=useState(inviteCode);
+  const [showCode,setShowCode]=useState(false);
+
+  const validate=()=>{
+    const e={};
+    if(!form.username.trim()) e.username='必填';
+    if(!form.password.trim()||form.password.length<6) e.password='至少6碼';
+    if(!form.unit.trim()) e.unit='必填';
+    if(!form.display.trim()) e.display='必填';
+    if(!editId && accounts.find(a=>a.username===form.username.trim())) e.username='帳號已存在';
+    setErrors(e);
+    return Object.keys(e).length===0;
+  };
+  const save=()=>{
+    if(!validate()) return;
+    if(editId){
+      const updated=accounts.map(a=>a.id===editId?{...a,...form}:a);
+      setAccounts(updated);
+      showToast('帳號已更新');
+    } else {
+      const newAcc={id:'u_'+Date.now(),...form};
+      setAccounts([...accounts,newAcc]);
+      showToast('帳號已新增');
+    }
+    setForm({username:'',password:'',role:'coach',unit:'',display:''});
+    setEditId(null); setErrors({});
+  };
+  const del=(id)=>{
+    if(id===currentUser.id){showToast('無法刪除自己的帳號','err');return;}
+    if(!confirm('確定刪除此帳號？')) return;
+    setAccounts(accounts.filter(a=>a.id!==id));
+    showToast('帳號已刪除');
+  };
+  const startEdit=(a)=>{
+    setForm({username:a.username,password:a.password,role:a.role,unit:a.unit,display:a.display});
+    setEditId(a.id);
+  };
+
+  return (
+    <div>
+      {/* ── Invite Code Card ── */}
+      <div className="card" style={{marginBottom:'1rem',borderColor:'rgba(233,196,106,.25)'}}>
+        <div className="card-title" style={{color:'var(--gold)'}}>🔑 邀請碼管理</div>
+        <div style={{display:'flex',gap:'1rem',alignItems:'flex-end',flexWrap:'wrap'}}>
+          <div className="form-group" style={{flex:1,minWidth:200}}>
+            <label className="form-label">目前邀請碼（教練憑此碼自助申請帳號）</label>
+            <div style={{display:'flex',gap:'.5rem',alignItems:'center'}}>
+              <input className="form-input" type={showCode?'text':'password'}
+                value={codeInput} onChange={e=>setCodeInput(e.target.value)}
+                style={{letterSpacing:showCode?'normal':'.2em',flex:1}}/>
+              <button className="btn btn-secondary btn-sm" onClick={()=>setShowCode(s=>!s)}>
+                {showCode?'隱藏':'顯示'}
+              </button>
+            </div>
+          </div>
+          <button className="btn btn-gold btn-sm" style={{marginBottom:'.35rem'}} onClick={()=>{
+            if(!codeInput.trim()){showToast('邀請碼不能空白','err');return;}
+            setInviteCode(codeInput.trim());
+            showToast('邀請碼已更新，請通知各單位教練');
+          }}>儲存邀請碼</button>
+        </div>
+        <div style={{marginTop:'.65rem',fontSize:'.75rem',color:'var(--gray)',lineHeight:1.7}}>
+          ① 將邀請碼告知各參賽單位教練（如群組通知、公文附件）<br/>
+          ② 教練在登入頁「申請帳號」輸入邀請碼後自行設定帳號密碼<br/>
+          ③ 如需關閉報名，更換邀請碼即可，舊碼立即失效
+        </div>
+      </div>
+      <div className="card">
+        <div className="card-title">{editId?'✏️ 編輯帳號':'➕ 手動新增帳號'}</div>
+        <div className="form-grid">
+          <div className="form-group">
+            <label className="form-label">帳號 *</label>
+            <input className="form-input" placeholder="登入帳號" value={form.username} onChange={e=>setForm(p=>({...p,username:e.target.value}))} disabled={!!editId}/>
+            {errors.username&&<span className="field-err">{errors.username}</span>}
+          </div>
+          <div className="form-group">
+            <label className="form-label">密碼 * （至少6碼）</label>
+            <input className="form-input" placeholder="密碼" value={form.password} onChange={e=>setForm(p=>({...p,password:e.target.value}))}/>
+            {errors.password&&<span className="field-err">{errors.password}</span>}
+          </div>
+          <div className="form-group">
+            <label className="form-label">角色</label>
+            <select className="form-select" value={form.role} onChange={e=>setForm(p=>({...p,role:e.target.value}))}>
+              <option value="coach">教練</option>
+              <option value="admin">管理員</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">單位名稱 *</label>
+            <input className="form-input" placeholder="學校或俱樂部全名" value={form.unit} onChange={e=>setForm(p=>({...p,unit:e.target.value}))}/>
+            {errors.unit&&<span className="field-err">{errors.unit}</span>}
+          </div>
+          <div className="form-group">
+            <label className="form-label">顯示名稱 *</label>
+            <input className="form-input" placeholder="如：○○國小教練" value={form.display} onChange={e=>setForm(p=>({...p,display:e.target.value}))}/>
+            {errors.display&&<span className="field-err">{errors.display}</span>}
+          </div>
+        </div>
+        <div className="btn-row">
+          <button className="btn btn-primary" onClick={save}>{editId?'儲存變更':'新增帳號'}</button>
+          {editId&&<button className="btn btn-secondary" onClick={()=>{setEditId(null);setForm({username:'',password:'',role:'coach',unit:'',display:''});setErrors({});}}>取消</button>}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-title">📋 帳號列表</div>
+        <div className="tbl-wrap">
+          <table>
+            <thead><tr><th>帳號</th><th>顯示名稱</th><th>單位</th><th>角色</th><th>操作</th></tr></thead>
+            <tbody>
+              {accounts.map(a=>(
+                <tr key={a.id}>
+                  <td style={{fontFamily:'JetBrains Mono',fontSize:'.82rem'}}>{a.username}</td>
+                  <td>{a.display}</td>
+                  <td style={{color:'var(--gray)',fontSize:'.82rem'}}>{a.unit}</td>
+                  <td><span className={`badge badge-${a.role}`}>{a.role==='admin'?'管理員':'教練'}</span></td>
+                  <td style={{display:'flex',gap:'.4rem'}}>
+                    <button className="btn btn-secondary btn-sm" onClick={()=>startEdit(a)}>編輯</button>
+                    {a.id!==currentUser.id&&<button className="btn btn-danger btn-sm" onClick={()=>del(a.id)}>刪除</button>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div style={{marginTop:'.75rem',fontSize:'.75rem',color:'var(--gray)'}}>
+          ⚠ 密碼以明文儲存於本機瀏覽器，適合內部網路或單一裝置使用。如需更高安全性請架設後端服務。
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REG FORM
+// ═══════════════════════════════════════════════════════════════
+const EMPTY_FORM={unit:'',name:'',gender:'男',group:'',items:[],times:{}};
+function RegForm({onSubmit,currentUser}){
+  const isCoach=currentUser.role==='coach';
+  const [f,setF]=useState({...EMPTY_FORM, unit: isCoach?currentUser.unit:''});
+  const [errors,setErrors]=useState({});
+
+  const toggleItem=item=>{
+    const next=f.items.includes(item)?f.items.filter(i=>i!==item):[...f.items,item];
+    setF(p=>({...p,items:next}));
+  };
+  const setTime=(item,val)=>setF(p=>({...p,times:{...p.times,[item]:val}}));
+  const validate=()=>{
+    const e={};
+    if(!f.unit.trim()) e.unit='請填寫單位';
+    if(!f.name.trim()) e.name='請填寫姓名';
+    if(!f.group) e.group='請選擇組別';
+    if(f.items.length===0) e.items='請選擇至少一個項目';
+    setErrors(e);
+    return Object.keys(e).length===0;
+  };
+  const handleSubmit=()=>{
+    if(!validate()) return;
+    onSubmit({...f,id:Date.now(),createdBy:currentUser.id});
+    setF({...EMPTY_FORM,unit:isCoach?currentUser.unit:''});
+    setErrors({});
+  };
+
+  return(
+    <div className="card">
+      <div className="card-title">📋 選手報名登錄</div>
+      <div className="form-grid">
+        <div className="form-group">
+          <label className="form-label">參賽單位 *</label>
+          <input className="form-input" placeholder="學校 / 俱樂部"
+            value={f.unit} disabled={isCoach}
+            onChange={e=>setF(p=>({...p,unit:e.target.value}))}
+            style={isCoach?{opacity:.7,cursor:'not-allowed'}:{}}/>
+          {errors.unit&&<span className="field-err">{errors.unit}</span>}
+        </div>
+        <div className="form-group">
+          <label className="form-label">選手姓名 *</label>
+          <input className="form-input" placeholder="姓名" value={f.name} onChange={e=>setF(p=>({...p,name:e.target.value}))}/>
+          {errors.name&&<span className="field-err">{errors.name}</span>}
+        </div>
+        <div className="form-group">
+          <label className="form-label">性別 *</label>
+          <select className="form-select" value={f.gender} onChange={e=>setF(p=>({...p,gender:e.target.value}))}>
+            <option value="男">男</option><option value="女">女</option>
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label">組別 *</label>
+          <select className="form-select" value={f.group} onChange={e=>setF(p=>({...p,group:e.target.value}))}>
+            <option value="">-- 選擇組別 --</option>
+            {GROUPS.map(g=><option key={g}>{g}</option>)}
+          </select>
+          {errors.group&&<span className="field-err">{errors.group}</span>}
+        </div>
+      </div>
+      <div className="form-group" style={{marginTop:'1rem'}}>
+        <label className="form-label">比賽項目 * （可複選）</label>
+        <div className="items-grid" style={{marginTop:'.45rem'}}>
+          {EVENTS.map(ev=>(
+            <div key={ev} className={`item-chip${f.items.includes(ev)?' selected':''}`} onClick={()=>toggleItem(ev)}>{ev}</div>
+          ))}
+        </div>
+        {errors.items&&<span className="field-err">{errors.items}</span>}
+      </div>
+      {f.items.length>0&&(
+        <div className="form-group" style={{marginTop:'1rem'}}>
+          <label className="form-label">參考成績（秒：28.50，或 分:秒：1:05.30）</label>
+          {f.items.map(item=>(
+            <div key={item} className="time-row">
+              <span className="time-label">{item}</span>
+              <input className="form-input time-input" placeholder="1:05.30"
+                value={f.times[item]||''} onChange={e=>setTime(item,e.target.value)}/>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="btn-row">
+        <button className="btn btn-primary" onClick={handleSubmit}>＋ 完成報名</button>
+        <button className="btn btn-secondary" onClick={()=>{setF({...EMPTY_FORM,unit:isCoach?currentUser.unit:''});setErrors({});}}>清除</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ATHLETE LIST
+// ═══════════════════════════════════════════════════════════════
+function AthleteList({athletes,onDelete,currentUser}){
+  const isAdmin=currentUser.role==='admin';
+  const [fG,setFG]=useState('全部');
+  const [fGr,setFGr]=useState('全部');
+  let list=athletes;
+  if(!isAdmin) list=list.filter(a=>a.unit===currentUser.unit);
+  if(fG!=='全部') list=list.filter(a=>a.gender===fG);
+  if(fGr!=='全部') list=list.filter(a=>a.group===fGr);
+
+  return(
+    <div>
+      {!isAdmin&&<div className="readonly-banner">⚠ 僅顯示「{currentUser.unit}」的選手。如需修改，請聯絡管理員。</div>}
+      <div className="filter-bar">
+        <select className="filter-select" value={fG} onChange={e=>setFG(e.target.value)}>
+          <option>全部</option><option>男</option><option>女</option>
+        </select>
+        <select className="filter-select" value={fGr} onChange={e=>setFGr(e.target.value)}>
+          <option value="全部">全部組別</option>
+          {GROUPS.map(g=><option key={g}>{g}</option>)}
+        </select>
+        <span style={{color:'var(--gray)',fontSize:'.78rem'}}>共 {list.length} 筆</span>
+      </div>
+      {list.length===0?(
+        <div className="empty"><div className="empty-icon">🏊</div>尚無報名資料</div>
+      ):(
+        <div className="tbl-wrap">
+          <table>
+            <thead><tr><th>#</th><th>單位</th><th>姓名</th><th>性別</th><th>組別</th><th>項目 / 參考成績</th><th className="no-print">操作</th></tr></thead>
+            <tbody>
+              {list.map((a,i)=>(
+                <tr key={a.id}>
+                  <td style={{fontFamily:'JetBrains Mono',color:'var(--gray)'}}>{i+1}</td>
+                  <td>{a.unit}</td>
+                  <td style={{fontWeight:500}}>{a.name}</td>
+                  <td><span className={`badge badge-${a.gender==='男'?'m':'f'}`}>{a.gender}</span></td>
+                  <td style={{fontSize:'.78rem',color:'var(--gray)'}}>{a.group}</td>
+                  <td style={{fontSize:'.76rem'}}>
+                    {a.items.map(it=>(
+                      <div key={it} style={{marginBottom:'.1rem'}}>
+                        {it} {a.times[it]&&<span style={{color:'var(--teal)',fontFamily:'JetBrains Mono',fontSize:'.73rem'}}>{a.times[it]}</span>}
+                      </div>
+                    ))}
+                  </td>
+                  <td className="no-print">
+                    {/* coach can delete own unit; admin can delete all */}
+                    {(isAdmin||a.unit===currentUser.unit)&&
+                      <button className="btn btn-danger btn-sm" onClick={()=>onDelete(a.id)}>刪除</button>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HEAT DRAW
+// ═══════════════════════════════════════════════════════════════
+function HeatDraw({athletes,results,setResults,currentUser}){
+  const isAdmin=currentUser.role==='admin';
+  const [fG,setFG]=useState('全部');
+  const [fEv,setFEv]=useState('全部');
+  const heats=buildHeats(athletes);
+  let visible=heats;
+  if(fG!=='全部') visible=visible.filter(h=>h.gender===fG);
+  if(fEv!=='全部') visible=visible.filter(h=>h.event===fEv);
+
+  const setResult=(hid,lane,val)=>setResults(prev=>({...prev,[`${hid}_${lane}`]:val}));
+  const getResult=(hid,lane)=>results[`${hid}_${lane}`]||'';
+
+  return(
+    <div>
+      {!isAdmin&&<div className="readonly-banner">👁 秩序冊唯讀檢視。成績輸入由管理員操作。</div>}
+      <div className="filter-bar no-print">
+        <select className="filter-select" value={fG} onChange={e=>setFG(e.target.value)}>
+          <option>全部</option><option>男</option><option>女</option>
+        </select>
+        <select className="filter-select" value={fEv} onChange={e=>setFEv(e.target.value)}>
+          <option value="全部">全部項目</option>
+          {EVENTS.map(ev=><option key={ev}>{ev}</option>)}
+        </select>
+        <button className="btn btn-secondary btn-sm no-print" onClick={()=>window.print()}>🖨️ 列印秩序冊</button>
+      </div>
+      {visible.length===0?(
+        <div className="empty"><div className="empty-icon">📋</div>請先完成報名後系統自動編排</div>
+      ):visible.map(h=>{
+        const hid=heatId(h);
+        const byLane={};
+        h.entries.forEach(e=>{ byLane[h.laneAssign[e.name+'|'+e.unit]]=e; });
+        return(
+          <div key={hid} className="heat-block">
+            <div className="heat-header">
+              <div className="heat-title">
+                <span className={`badge badge-${h.gender==='男'?'m':'f'}`} style={{marginRight:'.5rem'}}>{h.gender}</span>
+                {h.group} ▸ {h.event}
+              </div>
+              <div className="heat-meta">第 {h.heatNum} / {h.totalHeats} 組</div>
+            </div>
+            <div className="tbl-wrap lane-table">
+              <table>
+                <thead><tr><th style={{textAlign:'center'}}>道次</th><th>單位</th><th>姓名</th><th>參考成績</th><th>實際成績</th></tr></thead>
+                <tbody>
+                  {LANES.map(lane=>{
+                    const e=byLane[lane];
+                    return(
+                      <tr key={lane} className={lane===4||lane===5?'lane-center':''}>
+                        <td className="lane-num">{lane}</td>
+                        <td>{e?.unit||''}</td>
+                        <td style={{fontWeight:e?500:300,color:e?'inherit':'var(--gray)'}}>{e?.name||'（空道）'}</td>
+                        <td style={{fontFamily:'JetBrains Mono',fontSize:'.8rem',color:'var(--silver)'}}>{e?.refTime||''}</td>
+                        <td>
+                          {e&&(isAdmin
+                            ? <input className="result-input" placeholder="輸入成績"
+                                value={getResult(hid,lane)} onChange={ev=>setResult(hid,lane,ev.target.value)}/>
+                            : <span style={{fontFamily:'JetBrains Mono',fontSize:'.8rem',color:'var(--gold)'}}>{getResult(hid,lane)||'-'}</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RESULTS VIEW
+// ═══════════════════════════════════════════════════════════════
+function ResultsView({athletes,results}){
+  const heats=buildHeats(athletes);
+  const [fEv,setFEv]=useState('全部');
+  const aggregated={};
+  heats.forEach(h=>{
+    const hid=heatId(h);
+    const key=`${h.gender}|${h.group}|${h.event}`;
+    if(!aggregated[key]) aggregated[key]={gender:h.gender,group:h.group,event:h.event,rows:[]};
+    h.entries.forEach(e=>{
+      const lane=h.laneAssign[e.name+'|'+e.unit];
+      const actual=results[`${hid}_${lane}`]||'';
+      aggregated[key].rows.push({...e,actual,actualSec:parseTime(actual),heatNum:h.heatNum,lane});
+    });
+  });
+  let groups=Object.values(aggregated);
+  if(fEv!=='全部') groups=groups.filter(g=>g.event===fEv);
+  groups.forEach(g=>{
+    g.rows.sort((a,b)=>a.actualSec-b.actualSec);
+    g.rows.forEach((r,i)=>{ r.rank=isFinite(r.actualSec)?i+1:'-'; });
+  });
+  const medal=r=>r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':r.rank==='-'?'':r.rank;
+
+  return(
+    <div>
+      <div className="filter-bar no-print">
+        <select className="filter-select" value={fEv} onChange={e=>setFEv(e.target.value)}>
+          <option value="全部">全部項目</option>
+          {EVENTS.map(ev=><option key={ev}>{ev}</option>)}
+        </select>
+      </div>
+      {groups.length===0?(
+        <div className="empty"><div className="empty-icon">🏅</div>尚無成績資料</div>
+      ):groups.map(g=>(
+        <div key={`${g.gender}|${g.group}|${g.event}`} className="heat-block">
+          <div className="heat-header">
+            <div className="heat-title">
+              <span className={`badge badge-${g.gender==='男'?'m':'f'}`} style={{marginRight:'.5rem'}}>{g.gender}</span>
+              {g.group} ▸ {g.event}
+            </div>
+          </div>
+          <div className="tbl-wrap lane-table">
+            <table>
+              <thead><tr><th>名次</th><th>單位</th><th>姓名</th><th>參考成績</th><th>實際成績</th><th>組/道</th></tr></thead>
+              <tbody>
+                {g.rows.map((r,i)=>(
+                  <tr key={i}>
+                    <td style={{fontSize:'1rem'}}>{medal(r)}</td>
+                    <td>{r.unit}</td>
+                    <td style={{fontWeight:500}}>{r.name}</td>
+                    <td style={{fontFamily:'JetBrains Mono',color:'var(--gray)',fontSize:'.78rem'}}>{r.refTime||'-'}</td>
+                    <td style={{fontFamily:'JetBrains Mono',color:'var(--gold)',fontWeight:700}}>{r.actual||'-'}</td>
+                    <td style={{fontFamily:'JetBrains Mono',fontSize:'.76rem',color:'var(--gray)'}}>第{r.heatNum}組 道{r.lane}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXCEL EXPORT
+// ═══════════════════════════════════════════════════════════════
+function exportExcel(athletes,results){
+  const heats=buildHeats(athletes);
+  const wb=XLSX.utils.book_new();
+  const ath=[['#','單位','姓名','性別','組別','項目','參考成績']];
+  athletes.forEach((a,i)=>a.items.forEach(it=>ath.push([i+1,a.unit,a.name,a.gender,a.group,it,a.times[it]||''])));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(ath),'報名名單');
+  const ord=[['性別','組別','項目','組次','道次','單位','姓名','參考成績','實際成績']];
+  heats.forEach(h=>{
+    const hid2=heatId(h);
+    LANES.forEach(lane=>{
+      const e=h.entries.find(e=>h.laneAssign[e.name+'|'+e.unit]===lane);
+      const actual=results[`${hid2}_${lane}`]||'';
+      ord.push([h.gender,h.group,h.event,h.heatNum,lane,e?.unit||'',e?.name||'',e?.refTime||'',actual]);
+    });
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(ord),'秩序冊');
+  XLSX.writeFile(wb,'游泳比賽秩序冊.xlsx');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// APP
+// ═══════════════════════════════════════════════════════════════
+function App(){
+  const [accounts,setAccounts]=useState(()=>lsGet(LS.accounts,DEFAULT_ACCOUNTS));
+  const [athletes,setAthletes]=useState(()=>lsGet(LS.athletes,[]));
+  const [results,setResults]=useState(()=>lsGet(LS.results,{}));
+  const [inviteCode,setInviteCode]=useState(()=>lsGet(LS.inviteCode,DEFAULT_INVITE_CODE));
+  const [currentUser,setCurrentUser]=useState(null);
+  const [tab,setTab]=useState('register');
+  const [toast,setToast]=useState(null);
+
+  // persist
+  useEffect(()=>lsSet(LS.accounts,accounts),[accounts]);
+  useEffect(()=>lsSet(LS.athletes,athletes),[athletes]);
+  useEffect(()=>lsSet(LS.results,results),[results]);
+  useEffect(()=>lsSet(LS.inviteCode,inviteCode),[inviteCode]);
+
+  const showToast=(msg,type='ok')=>{setToast({msg,type});};
+  const addAthlete=a=>{setAthletes(p=>[...p,a]);showToast(`${a.name} 報名成功（${a.items.length} 項目）`);};
+  const delAthlete=id=>{setAthletes(p=>p.filter(a=>a.id!==id));showToast('選手已刪除');};
+  const logout=()=>{setCurrentUser(null);setTab('register');};
+
+  const isAdmin=currentUser?.role==='admin';
+  const heats=buildHeats(athletes);
+  const entryCount=athletes.reduce((s,a)=>s+a.items.length,0);
+
+  const TABS=[
+    {key:'register',label:'選手報名'},
+    {key:'athletes',label:'報名名單',cnt:isAdmin?athletes.length:athletes.filter(a=>a.unit===currentUser?.unit).length},
+    {key:'heats',label:'分組秩序冊',cnt:heats.length},
+    {key:'results',label:'成績查詢'},
+    ...(isAdmin?[{key:'accounts',label:'帳號管理'}]:[]),
+  ];
+
+  if(!currentUser) return <LoginScreen accounts={accounts} setAccounts={setAccounts} inviteCode={inviteCode} onLogin={u=>{setCurrentUser(u);setTab('register');}}/>;
+
+  return(
+    <>
+      <nav className="nav">
+        <div className="nav-logo">🏊 競賽管理</div>
+        <div className="nav-tabs">
+          {TABS.map(({key,label,cnt})=>(
+            <div key={key} className={`nav-tab${tab===key?' active':''}`} onClick={()=>setTab(key)}>
+              {label}{cnt!==undefined&&cnt>0&&<span className="nav-count">{cnt}</span>}
+            </div>
+          ))}
+        </div>
+        <div className="nav-right no-print">
+          <div className="user-pill">
+            <span>{currentUser.display}</span>
+            <span className={`user-role ${currentUser.role}`}>{currentUser.role==='admin'?'管理員':'教練'}</span>
+          </div>
+          {isAdmin&&<button className="btn btn-gold btn-sm" onClick={()=>exportExcel(athletes,results)}>⬇ Excel</button>}
+          <button className="btn btn-secondary btn-sm" onClick={logout}>登出</button>
+        </div>
+      </nav>
+
+      <div className="main">
+        <div className="stats-row no-print">
+          <div className="stat-box"><div className="stat-num">{athletes.length}</div><div className="stat-label">報名人數</div></div>
+          <div className="stat-box"><div className="stat-num">{entryCount}</div><div className="stat-label">報名項次</div></div>
+          <div className="stat-box"><div className="stat-num">{heats.length}</div><div className="stat-label">編排組數</div></div>
+          <div className="stat-box"><div className="stat-num">{[...new Set(athletes.map(a=>a.unit))].length}</div><div className="stat-label">參賽單位</div></div>
+          {isAdmin&&<div className="stat-box"><div className="stat-num">{Object.values(results).filter(v=>v&&v.trim()).length}</div><div className="stat-label">已登錄成績</div></div>}
+        </div>
+
+        {tab==='register'&&(
+          <>
+            <RegForm onSubmit={addAthlete} currentUser={currentUser}/>
+            <div className="card">
+              <div className="card-title">📌 操作說明</div>
+              <div style={{color:'var(--gray)',fontSize:'.83rem',lineHeight:1.9}}>
+                {isAdmin?(
+                  <>
+                    <p>① 可以替任何單位新增選手，或讓各單位教練自行登入報名</p>
+                    <p>② 「帳號管理」頁面可新增教練帳號，帳號綁定單位名稱</p>
+                    <p>③ 系統自動依「性別→組別→項目→參考成績」進行分組與道次排列</p>
+                    <p>④ 在「分組秩序冊」輸入實際成績，「成績查詢」自動排名</p>
+                    <p>⑤ 點選 Excel 匯出完整秩序冊，或列印紙本</p>
+                  </>
+                ):(
+                  <>
+                    <p>① 填寫選手資料，選擇比賽項目與參考成績後送出</p>
+                    <p>② 您只能管理「{currentUser.unit}」的選手資料</p>
+                    <p>③ 分組秩序冊與成績查詢可供唯讀查看</p>
+                    <p>④ 如需修改已送出的報名，請聯絡主辦單位管理員</p>
+                  </>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {tab==='athletes'&&(
+          <div className="card">
+            <div className="section-header">
+              <div className="section-title">報名名單</div>
+              {isAdmin&&<button className="btn btn-danger btn-sm no-print" onClick={()=>{if(confirm('確定清除所有報名資料？')){setAthletes([]);showToast('已清除全部報名','ok');}}}>清除全部</button>}
+            </div>
+            <AthleteList athletes={athletes} onDelete={delAthlete} currentUser={currentUser}/>
+          </div>
+        )}
+
+        {tab==='heats'&&(
+          <div className="card">
+            <div className="section-title" style={{marginBottom:'1rem'}}>分組秩序冊 ▸ 道次表</div>
+            <HeatDraw athletes={athletes} results={results} setResults={setResults} currentUser={currentUser}/>
+          </div>
+        )}
+
+        {tab==='results'&&(
+          <div className="card">
+            <div className="section-title" style={{marginBottom:'1rem'}}>成績查詢 ▸ 名次排列</div>
+            <ResultsView athletes={athletes} results={results}/>
+          </div>
+        )}
+
+        {tab==='accounts'&&isAdmin&&(
+          <AccountMgmt accounts={accounts} setAccounts={setAccounts} currentUser={currentUser} showToast={showToast} inviteCode={inviteCode} setInviteCode={setInviteCode}/>
+        )}
+      </div>
+
+      {toast&&<Toast msg={toast.msg} type={toast.type} onDone={()=>setToast(null)}/>}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
