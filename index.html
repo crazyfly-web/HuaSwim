@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>游泳競賽管理系統</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0a1628;
+    --navy2: #112240;
+    --navy3: #1d3461;
+    --teal: #00b4d8;
+    --teal2: #0077b6;
+    --gold: #e9c46a;
+    --silver: #a8dadc;
+    --white: #f8f9fa;
+    --gray: #8899aa;
+    --danger: #e63946;
+    --success: #2dc653;
+    --lane-colors: #00b4d8;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--navy);
+    color: var(--white);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  /* Water background */
+  body::before {
+    content:'';
+    position:fixed;
+    inset:0;
+    background: 
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 58px,
+        rgba(0,180,216,0.06) 58px,
+        rgba(0,180,216,0.06) 60px
+      ),
+      linear-gradient(180deg, #0a1628 0%, #0d2137 50%, #0a1628 100%);
+    pointer-events:none;
+    z-index:0;
+  }
+
+  /* Nav */
+  .nav {
+    position: sticky; top:0; z-index:100;
+    background: rgba(10,22,40,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0,180,216,0.2);
+    padding: 0 2rem;
+    display: flex; align-items: center; gap: 0;
+  }
+  .nav-logo {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--teal);
+    padding: 1rem 1.5rem 1rem 0;
+    border-right: 1px solid rgba(0,180,216,0.2);
+    margin-right: 1.5rem;
+    letter-spacing: .05em;
+    white-space: nowrap;
+  }
+  .nav-tabs { display:flex; gap:0; flex:1; }
+  .nav-tab {
+    padding: .85rem 1.4rem;
+    cursor: pointer;
+    font-size: .85rem;
+    font-weight: 500;
+    color: var(--gray);
+    border-bottom: 2px solid transparent;
+    transition: all .2s;
+    white-space: nowrap;
+    letter-spacing: .03em;
+  }
+  .nav-tab:hover { color: var(--white); }
+  .nav-tab.active { color: var(--teal); border-bottom-color: var(--teal); }
+  .nav-count {
+    display:inline-flex; align-items:center; justify-content:center;
+    background: var(--teal2); color:#fff;
+    font-size:.65rem; font-weight:700;
+    min-width:18px; height:18px; border-radius:9px;
+    padding:0 4px; margin-left:6px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Main */
+  .main { position:relative; z-index:1; padding: 2rem; max-width: 1400px; margin: 0 auto; }
+
+  /* Cards */
+  .card {
+    background: rgba(17,34,64,0.7);
+    border: 1px solid rgba(0,180,216,0.15);
+    border-radius: 12px;
+    padding: 1.5rem;
+    backdrop-filter: blur(8px);
+  }
+  .card-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--teal);
+    margin-bottom: 1.25rem;
+    padding-bottom: .75rem;
+    border-bottom: 1px solid rgba(0,180,216,0.15);
+    letter-spacing: .05em;
+  }
+
+  /* Form */
+  .form-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap:1rem; }
+  .form-group { display:flex; flex-direction:column; gap:.4rem; }
+  .form-label { font-size:.78rem; color:var(--gray); font-weight:500; letter-spacing:.04em; }
+  .form-input, .form-select {
+    background: rgba(10,22,40,0.8);
+    border: 1px solid rgba(0,180,216,0.2);
+    border-radius: 6px;
+    padding: .6rem .9rem;
+    color: var(--white);
+    font-size: .88rem;
+    font-family: 'Noto Sans TC', sans-serif;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--teal); }
+  .form-select option { background: var(--navy2); }
+  .form-input::placeholder { color: var(--gray); }
+
+  /* Buttons */
+  .btn {
+    padding: .6rem 1.2rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: .85rem;
+    font-weight: 500;
+    font-family: 'Noto Sans TC', sans-serif;
+    transition: all .2s;
+    display: inline-flex; align-items:center; gap:.5rem;
+    letter-spacing: .03em;
+  }
+  .btn-primary { background: var(--teal); color: var(--navy); }
+  .btn-primary:hover { background: #00caf0; transform:translateY(-1px); }
+  .btn-secondary { background: rgba(0,180,216,0.12); color:var(--teal); border:1px solid rgba(0,180,216,0.3); }
+  .btn-secondary:hover { background: rgba(0,180,216,0.22); }
+  .btn-danger { background: rgba(230,57,70,0.15); color:var(--danger); border:1px solid rgba(230,57,70,0.3); }
+  .btn-danger:hover { background: rgba(230,57,70,0.25); }
+  .btn-gold { background: var(--gold); color: var(--navy); font-weight:700; }
+  .btn-gold:hover { background: #f0d080; transform:translateY(-1px); }
+  .btn-sm { padding:.4rem .8rem; font-size:.78rem; }
+  .btn-row { display:flex; gap:.75rem; flex-wrap:wrap; margin-top:1rem; }
+
+  /* Items checkbox grid */
+  .items-grid { display:flex; flex-wrap:wrap; gap:.5rem; }
+  .item-chip {
+    padding:.35rem .8rem;
+    border-radius:20px;
+    border: 1px solid rgba(0,180,216,0.25);
+    background: rgba(10,22,40,0.6);
+    color: var(--gray);
+    font-size:.78rem;
+    cursor:pointer;
+    transition: all .2s;
+    user-select:none;
+  }
+  .item-chip.selected { background: rgba(0,180,216,0.2); border-color: var(--teal); color: var(--teal); }
+  .item-chip:hover { border-color: rgba(0,180,216,0.5); color: var(--white); }
+
+  /* Time input */
+  .time-row { display:flex; gap:.5rem; align-items:center; margin-top:.4rem; }
+  .time-label { font-size:.75rem; color:var(--gray); width:120px; flex-shrink:0; }
+  .time-input { width:90px; }
+
+  /* Table */
+  .tbl-wrap { overflow-x:auto; border-radius:8px; border:1px solid rgba(0,180,216,0.12); }
+  table { width:100%; border-collapse:collapse; font-size:.83rem; }
+  th {
+    background: rgba(0,180,216,0.1);
+    color: var(--teal);
+    font-weight:600;
+    padding:.7rem 1rem;
+    text-align:left;
+    letter-spacing:.04em;
+    font-size:.75rem;
+    white-space:nowrap;
+  }
+  td {
+    padding:.65rem 1rem;
+    border-top: 1px solid rgba(0,180,216,0.07);
+    color: rgba(248,249,250,0.85);
+    vertical-align:middle;
+  }
+  tr:hover td { background: rgba(0,180,216,0.04); }
+  .badge {
+    display:inline-block;
+    padding:.2rem .55rem;
+    border-radius:4px;
+    font-size:.72rem;
+    font-weight:600;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .badge-m { background:rgba(0,119,182,0.25); color:#48cae4; }
+  .badge-f { background:rgba(233,196,106,0.2); color:var(--gold); }
+
+  /* Lane draw / heat table */
+  .heat-block { margin-bottom:2rem; }
+  .heat-header {
+    display:flex; align-items:center; gap:1rem;
+    padding:.6rem 1rem;
+    background: rgba(0,180,216,0.1);
+    border-radius:8px 8px 0 0;
+    border: 1px solid rgba(0,180,216,0.2);
+    border-bottom:none;
+  }
+  .heat-title { font-family:'Noto Serif TC',serif; font-weight:600; font-size:.9rem; }
+  .heat-meta { font-size:.75rem; color:var(--gray); }
+  .lane-table { border-radius:0 0 8px 8px; border:1px solid rgba(0,180,216,0.2); }
+  .lane-num {
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    color:var(--teal);
+    font-size:1rem;
+    text-align:center;
+    width:50px;
+  }
+  .lane-center { background:rgba(0,180,216,0.08); }
+  .result-input {
+    background: rgba(10,22,40,0.8);
+    border: 1px solid rgba(0,180,216,0.15);
+    border-radius:4px;
+    padding:.3rem .6rem;
+    color: var(--white);
+    font-family:'JetBrains Mono',monospace;
+    font-size:.82rem;
+    width:90px;
+    outline:none;
+  }
+  .result-input:focus { border-color:var(--teal); }
+
+  /* Stats */
+  .stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+  .stat-box {
+    background: rgba(17,34,64,0.6);
+    border: 1px solid rgba(0,180,216,0.15);
+    border-radius:10px;
+    padding:1rem;
+    text-align:center;
+  }
+  .stat-num { font-family:'JetBrains Mono',monospace; font-size:1.8rem; font-weight:700; color:var(--teal); }
+  .stat-label { font-size:.72rem; color:var(--gray); margin-top:.25rem; letter-spacing:.04em; }
+
+  /* Section header */
+  .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; flex-wrap:wrap; gap:.75rem; }
+  .section-title { font-family:'Noto Serif TC',serif; font-size:1.1rem; font-weight:700; letter-spacing:.05em; }
+
+  /* Filter bar */
+  .filter-bar { display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:1.25rem; align-items:center; }
+  .filter-select {
+    background: rgba(10,22,40,0.8);
+    border: 1px solid rgba(0,180,216,0.2);
+    border-radius:6px;
+    padding:.45rem .8rem;
+    color:var(--white);
+    font-size:.82rem;
+    font-family:'Noto Sans TC',sans-serif;
+    outline:none;
+  }
+  .filter-select:focus { border-color:var(--teal); }
+
+  /* Print */
+  @media print {
+    body { background:white; color:black; }
+    body::before { display:none; }
+    .nav, .no-print { display:none!important; }
+    .main { padding:0; max-width:none; }
+    .card { background:white; border:1px solid #ccc; }
+    .card-title { color:#0077b6; }
+    th { background:#e0f4ff; color:#0077b6; }
+    td { color:#111; }
+    .heat-header { background:#e0f4ff; }
+    .heat-block { page-break-inside:avoid; }
+    table { font-size:11pt; }
+    .result-input { border:1px solid #ccc; background:white; color:#000; }
+    .tbl-wrap { border:1px solid #ccc; }
+  }
+
+  /* Empty state */
+  .empty { text-align:center; padding:3rem 1rem; color:var(--gray); }
+  .empty-icon { font-size:3rem; margin-bottom:1rem; opacity:.4; }
+
+  /* Toast */
+  .toast {
+    position:fixed; bottom:2rem; right:2rem; z-index:9999;
+    background:var(--success); color:var(--navy);
+    padding:.75rem 1.25rem; border-radius:8px;
+    font-weight:600; font-size:.85rem;
+    animation: fadeInUp .3s ease;
+  }
+  @keyframes fadeInUp {
+    from { opacity:0; transform:translateY(10px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+
+  /* Responsive */
+  @media(max-width:640px) {
+    .nav { padding:0 1rem; overflow-x:auto; }
+    .main { padding:1rem; }
+    .form-grid { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+// ── Constants ──────────────────────────────────────────────
+const GROUPS = ['國小甲組(11-12歲)','國小乙組(9-10歲)','國中男女生組','高中男女生組','公開組'];
+const EVENTS = [
+  '50M 自由式','100M 自由式','200M 自由式','400M 自由式',
+  '50M 蝶式','100M 蝶式',
+  '50M 仰式','100M 仰式',
+  '50M 蛙式','100M 蛙式',
+  '200M 個人混合式','400M 個人混合式',
+  '4×50M 自由式接力','4×100M 自由式接力','4×50M 混合式接力'
+];
+const LANES = [1,2,3,4,5,6,7,8];
+const LANE_ORDER = [4,5,3,6,2,7,1,8]; // snake from center
+
+function parseTime(str) {
+  if (!str || str.trim()==='') return Infinity;
+  const s = str.trim().replace('\'',':').replace('"','');
+  const parts = s.split(':');
+  if (parts.length===2) return parseFloat(parts[0])*60 + parseFloat(parts[1]);
+  return parseFloat(s)||Infinity;
+}
+function formatTime(sec) {
+  if (!isFinite(sec)||sec===0) return '-';
+  if (sec<60) return sec.toFixed(2)+'\"';
+  const m=Math.floor(sec/60), s=(sec%60).toFixed(2).padStart(5,'0');
+  return `${m}'${s}"`;
+}
+
+// ── Toast ──────────────────────────────────────────────────
+function Toast({msg,onDone}) {
+  useEffect(()=>{const t=setTimeout(onDone,2200);return()=>clearTimeout(t);},[]);
+  return <div className="toast">✓ {msg}</div>;
+}
+
+// ── Registration Form ──────────────────────────────────────
+const EMPTY_FORM = {unit:'',name:'',gender:'男',group:'',items:[],times:{}};
+function RegForm({onSubmit}) {
+  const [f,setF]=useState({...EMPTY_FORM});
+  const [errors,setErrors]=useState({});
+
+  const toggleItem = item => {
+    const next = f.items.includes(item) ? f.items.filter(i=>i!==item) : [...f.items,item];
+    setF(p=>({...p,items:next}));
+  };
+  const setTime = (item,val)=> setF(p=>({...p,times:{...p.times,[item]:val}}));
+  const validate = ()=>{
+    const e={};
+    if(!f.unit.trim()) e.unit='請填寫單位';
+    if(!f.name.trim()) e.name='請填寫姓名';
+    if(!f.group) e.group='請選擇組別';
+    if(f.items.length===0) e.items='請選擇至少一個比賽項目';
+    setErrors(e);
+    return Object.keys(e).length===0;
+  };
+  const handleSubmit = ()=>{
+    if(!validate()) return;
+    onSubmit({...f, id: Date.now()});
+    setF({...EMPTY_FORM});
+    setErrors({});
+  };
+
+  return (
+    <div className="card">
+      <div className="card-title">📋 選手報名登錄</div>
+      <div className="form-grid">
+        <div className="form-group">
+          <label className="form-label">參賽單位 *</label>
+          <input className="form-input" placeholder="學校 / 俱樂部名稱"
+            value={f.unit} onChange={e=>setF(p=>({...p,unit:e.target.value}))} />
+          {errors.unit && <span style={{color:'var(--danger)',fontSize:'.75rem'}}>{errors.unit}</span>}
+        </div>
+        <div className="form-group">
+          <label className="form-label">選手姓名 *</label>
+          <input className="form-input" placeholder="姓名"
+            value={f.name} onChange={e=>setF(p=>({...p,name:e.target.value}))} />
+          {errors.name && <span style={{color:'var(--danger)',fontSize:'.75rem'}}>{errors.name}</span>}
+        </div>
+        <div className="form-group">
+          <label className="form-label">性別 *</label>
+          <select className="form-select" value={f.gender} onChange={e=>setF(p=>({...p,gender:e.target.value}))}>
+            <option value="男">男</option>
+            <option value="女">女</option>
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label">組別 *</label>
+          <select className="form-select" value={f.group} onChange={e=>setF(p=>({...p,group:e.target.value}))}>
+            <option value="">-- 選擇組別 --</option>
+            {GROUPS.map(g=><option key={g} value={g}>{g}</option>)}
+          </select>
+          {errors.group && <span style={{color:'var(--danger)',fontSize:'.75rem'}}>{errors.group}</span>}
+        </div>
+      </div>
+
+      <div className="form-group" style={{marginTop:'1rem'}}>
+        <label className="form-label">比賽項目 * （可複選）</label>
+        <div className="items-grid" style={{marginTop:'.5rem'}}>
+          {EVENTS.map(ev=>(
+            <div key={ev} className={`item-chip${f.items.includes(ev)?' selected':''}`}
+              onClick={()=>toggleItem(ev)}>{ev}</div>
+          ))}
+        </div>
+        {errors.items && <span style={{color:'var(--danger)',fontSize:'.75rem'}}>{errors.items}</span>}
+      </div>
+
+      {f.items.length>0 && (
+        <div className="form-group" style={{marginTop:'1rem'}}>
+          <label className="form-label">參考成績（格式：秒 或 分:秒，例如 28.50 或 1:05.30）</label>
+          {f.items.map(item=>(
+            <div key={item} className="time-row">
+              <span className="time-label">{item}</span>
+              <input className="form-input time-input" placeholder="1:05.30"
+                value={f.times[item]||''} onChange={e=>setTime(item,e.target.value)} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="btn-row">
+        <button className="btn btn-primary" onClick={handleSubmit}>＋ 完成報名</button>
+        <button className="btn btn-secondary" onClick={()=>{setF({...EMPTY_FORM});setErrors({});}}>清除</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Athletes List ──────────────────────────────────────────
+function AthleteList({athletes,onDelete}) {
+  const [fGender,setFGender]=useState('全部');
+  const [fGroup,setFGroup]=useState('全部');
+  let list = athletes;
+  if(fGender!=='全部') list=list.filter(a=>a.gender===fGender);
+  if(fGroup!=='全部') list=list.filter(a=>a.group===fGroup);
+
+  return (
+    <div>
+      <div className="filter-bar">
+        <select className="filter-select" value={fGender} onChange={e=>setFGender(e.target.value)}>
+          <option>全部</option><option>男</option><option>女</option>
+        </select>
+        <select className="filter-select" value={fGroup} onChange={e=>setFGroup(e.target.value)}>
+          <option value="全部">全部組別</option>
+          {GROUPS.map(g=><option key={g}>{g}</option>)}
+        </select>
+        <span style={{color:'var(--gray)',fontSize:'.8rem'}}>共 {list.length} 筆</span>
+      </div>
+      {list.length===0 ? (
+        <div className="empty"><div className="empty-icon">🏊</div>尚無報名資料</div>
+      ) : (
+        <div className="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>單位</th><th>姓名</th><th>性別</th><th>組別</th><th>項目</th><th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((a,i)=>(
+                <tr key={a.id}>
+                  <td style={{fontFamily:'JetBrains Mono',color:'var(--gray)'}}>{i+1}</td>
+                  <td>{a.unit}</td>
+                  <td style={{fontWeight:500}}>{a.name}</td>
+                  <td><span className={`badge badge-${a.gender==='男'?'m':'f'}`}>{a.gender}</span></td>
+                  <td style={{fontSize:'.8rem',color:'var(--gray)'}}>{a.group}</td>
+                  <td style={{fontSize:'.78rem'}}>
+                    {a.items.map(it=>(
+                      <div key={it} style={{marginBottom:'.15rem'}}>
+                        {it} {a.times[it] ? <span style={{color:'var(--teal)',fontFamily:'JetBrains Mono',fontSize:'.75rem'}}>{a.times[it]}</span> : ''}
+                      </div>
+                    ))}
+                  </td>
+                  <td>
+                    <button className="btn btn-danger btn-sm" onClick={()=>onDelete(a.id)}>刪除</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Heat Draw Logic ────────────────────────────────────────
+function buildHeats(athletes) {
+  // group: gender + group + event
+  const map = {};
+  athletes.forEach(a=>{
+    a.items.forEach(item=>{
+      const key = `${a.gender}｜${a.group}｜${item}`;
+      if(!map[key]) map[key]={gender:a.gender,group:a.group,event:item,entries:[]};
+      map[key].entries.push({
+        athleteId:a.id, name:a.name, unit:a.unit,
+        refTime: a.times[item]||'', refSec: parseTime(a.times[item]||'')
+      });
+    });
+  });
+
+  const heats = [];
+  Object.values(map).forEach(({gender,group,event,entries})=>{
+    // sort by ref time asc (slower→faster, faster in final heat)
+    const sorted = [...entries].sort((a,b)=>a.refSec-b.refSec);
+    // split into heats of 8
+    let h=0;
+    while(h*8<sorted.length){
+      const batch = sorted.slice(h*8,(h+1)*8);
+      // assign lanes snake from center for fastest in batch
+      const laneAssign = {};
+      const bySpeed=[...batch].sort((a,b)=>a.refSec-b.refSec);
+      bySpeed.forEach((e,idx)=>{ laneAssign[e.name+e.unit] = LANE_ORDER[idx]; });
+      heats.push({gender,group,event,heatNum:h+1,totalHeats:Math.ceil(sorted.length/8),entries:batch,laneAssign});
+      h++;
+    }
+  });
+  // sort heats: gender → group → event → heatNum
+  heats.sort((a,b)=>{
+    if(a.gender!==b.gender) return a.gender.localeCompare(b.gender);
+    if(a.group!==b.group) return a.group.localeCompare(b.group);
+    if(a.event!==b.event) return EVENTS.indexOf(a.event)-EVENTS.indexOf(b.event);
+    return a.heatNum-b.heatNum;
+  });
+  return heats;
+}
+
+// ── Heat / Order Book ──────────────────────────────────────
+function HeatDraw({athletes, results, setResults}) {
+  const [fGender,setFGender]=useState('全部');
+  const [fEvent,setFEvent]=useState('全部');
+  const heats = buildHeats(athletes);
+  let visible = heats;
+  if(fGender!=='全部') visible=visible.filter(h=>h.gender===fGender);
+  if(fEvent!=='全部') visible=visible.filter(h=>h.event===fEvent);
+
+  const setResult=(hid,lane,val)=>{
+    setResults(prev=>({...prev,[`${hid}_${lane}`]:val}));
+  };
+  const getResult=(hid,lane)=>results[`${hid}_${lane}`]||'';
+
+  const heatId=(h)=>`${h.gender}|${h.group}|${h.event}|${h.heatNum}`;
+
+  return (
+    <div>
+      <div className="filter-bar no-print">
+        <select className="filter-select" value={fGender} onChange={e=>setFGender(e.target.value)}>
+          <option>全部</option><option>男</option><option>女</option>
+        </select>
+        <select className="filter-select" value={fEvent} onChange={e=>setFEvent(e.target.value)}>
+          <option value="全部">全部項目</option>
+          {EVENTS.map(ev=><option key={ev}>{ev}</option>)}
+        </select>
+        <button className="btn btn-secondary btn-sm no-print" onClick={()=>window.print()}>🖨️ 列印秩序冊</button>
+      </div>
+
+      {visible.length===0 ? (
+        <div className="empty"><div className="empty-icon">📋</div>請先完成報名後自動編排</div>
+      ) : visible.map(h=>{
+        const hid = heatId(h);
+        // build lane map: lane→entry
+        const byLane={};
+        h.entries.forEach(e=>{ byLane[h.laneAssign[e.name+e.unit]]=e; });
+        return (
+          <div key={hid} className="heat-block">
+            <div className="heat-header">
+              <div className="heat-title">
+                <span className={`badge badge-${h.gender==='男'?'m':'f'}`} style={{marginRight:'.5rem'}}>{h.gender}</span>
+                {h.group} ▸ {h.event}
+              </div>
+              <div className="heat-meta">第 {h.heatNum} / {h.totalHeats} 組</div>
+            </div>
+            <div className="tbl-wrap lane-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{textAlign:'center'}}>道次</th>
+                    <th>單位</th><th>姓名</th>
+                    <th>參考成績</th><th>實際成績</th><th>名次</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {LANES.map(lane=>{
+                    const e=byLane[lane];
+                    return (
+                      <tr key={lane} className={lane===4||lane===5?'lane-center':''}>
+                        <td className="lane-num">{lane}</td>
+                        <td>{e?.unit||''}</td>
+                        <td style={{fontWeight:e?500:300,color:e?'inherit':'var(--gray)'}}>{e?.name||'（空道）'}</td>
+                        <td style={{fontFamily:'JetBrains Mono',fontSize:'.82rem',color:'var(--silver)'}}>
+                          {e?.refTime||''}
+                        </td>
+                        <td>
+                          {e && <input className="result-input" placeholder="輸入成績"
+                            value={getResult(hid,lane)} onChange={ev=>setResult(hid,lane,ev.target.value)} />}
+                        </td>
+                        <td style={{fontFamily:'JetBrains Mono',color:'var(--gold)'}}></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Results View ───────────────────────────────────────────
+function ResultsView({athletes,results}) {
+  const heats = buildHeats(athletes);
+  const heatId=(h)=>`${h.gender}|${h.group}|${h.event}|${h.heatNum}`;
+  const [fEvent,setFEvent]=useState('全部');
+
+  // Aggregate: for each gender+group+event, collect all entries with actual time
+  const aggregated={};
+  heats.forEach(h=>{
+    const hid=heatId(h);
+    const key=`${h.gender}|${h.group}|${h.event}`;
+    if(!aggregated[key]) aggregated[key]={gender:h.gender,group:h.group,event:h.event,rows:[]};
+    h.entries.forEach(e=>{
+      const lane=h.laneAssign[e.name+e.unit];
+      const actual=results[`${hid}_${lane}`]||'';
+      aggregated[key].rows.push({...e,actual,actualSec:parseTime(actual),heatNum:h.heatNum,lane});
+    });
+  });
+
+  let groups = Object.values(aggregated);
+  if(fEvent!=='全部') groups=groups.filter(g=>g.event===fEvent);
+
+  groups.forEach(g=>{
+    g.rows.sort((a,b)=>a.actualSec-b.actualSec);
+    g.rows.forEach((r,i)=>{ r.rank = isFinite(r.actualSec)? i+1 : '-'; });
+  });
+
+  const rankBadge = r => {
+    if(r.rank===1) return '🥇';
+    if(r.rank===2) return '🥈';
+    if(r.rank===3) return '🥉';
+    return r.rank==='-'?'':r.rank;
+  };
+
+  return (
+    <div>
+      <div className="filter-bar no-print">
+        <select className="filter-select" value={fEvent} onChange={e=>setFEvent(e.target.value)}>
+          <option value="全部">全部項目</option>
+          {EVENTS.map(ev=><option key={ev}>{ev}</option>)}
+        </select>
+      </div>
+      {groups.length===0?(
+        <div className="empty"><div className="empty-icon">🏅</div>尚無成績資料</div>
+      ):groups.map(g=>(
+        <div key={`${g.gender}|${g.group}|${g.event}`} className="heat-block">
+          <div className="heat-header">
+            <div className="heat-title">
+              <span className={`badge badge-${g.gender==='男'?'m':'f'}`} style={{marginRight:'.5rem'}}>{g.gender}</span>
+              {g.group} ▸ {g.event}
+            </div>
+          </div>
+          <div className="tbl-wrap lane-table">
+            <table>
+              <thead>
+                <tr><th>名次</th><th>單位</th><th>姓名</th><th>參考成績</th><th>實際成績</th><th>組次/道次</th></tr>
+              </thead>
+              <tbody>
+                {g.rows.map((r,i)=>(
+                  <tr key={i}>
+                    <td style={{fontSize:'1.1rem'}}>{rankBadge(r)}</td>
+                    <td>{r.unit}</td>
+                    <td style={{fontWeight:500}}>{r.name}</td>
+                    <td style={{fontFamily:'JetBrains Mono',color:'var(--gray)',fontSize:'.8rem'}}>{r.refTime||'-'}</td>
+                    <td style={{fontFamily:'JetBrains Mono',color:'var(--gold)',fontWeight:700}}>{r.actual||'-'}</td>
+                    <td style={{fontFamily:'JetBrains Mono',fontSize:'.78rem',color:'var(--gray)'}}>第{r.heatNum}組 道{r.lane}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Excel Export ───────────────────────────────────────────
+function exportExcel(athletes,results) {
+  const heats = buildHeats(athletes);
+  const heatId=(h)=>`${h.gender}|${h.group}|${h.event}|${h.heatNum}`;
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Athletes
+  const athRows = [['#','單位','姓名','性別','組別','項目','參考成績']];
+  athletes.forEach((a,i)=>{
+    a.items.forEach(it=>{
+      athRows.push([i+1,a.unit,a.name,a.gender,a.group,it,a.times[it]||'']);
+    });
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(athRows), '報名名單');
+
+  // Sheet 2: Order
+  const orderRows=[['性別','組別','項目','組次','道次','單位','姓名','參考成績','實際成績']];
+  heats.forEach(h=>{
+    const hid=heatId(h);
+    LANES.forEach(lane=>{
+      const e=Object.values(h.entries).find(e=>h.laneAssign[e.name+e.unit]===lane);
+      const actual=results[`${hid}_${lane}`]||'';
+      orderRows.push([h.gender,h.group,h.event,h.heatNum,lane,e?.unit||'',e?.name||'',e?.refTime||'',actual]);
+    });
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(orderRows), '秩序冊');
+
+  XLSX.writeFile(wb,'游泳比賽秩序冊.xlsx');
+}
+
+// ── App ────────────────────────────────────────────────────
+function App() {
+  const [tab,setTab]=useState('register');
+  const [athletes,setAthletes]=useState([]);
+  const [results,setResults]=useState({});
+  const [toast,setToast]=useState('');
+
+  const addAthlete = (a) => {
+    setAthletes(prev=>[...prev,a]);
+    setToast(`${a.name} 報名成功（${a.items.length} 項目）`);
+  };
+  const delAthlete = (id) => setAthletes(prev=>prev.filter(a=>a.id!==id));
+
+  const heats = buildHeats(athletes);
+  const entryCount = athletes.reduce((s,a)=>s+a.items.length,0);
+
+  return (
+    <>
+      <nav className="nav">
+        <div className="nav-logo">🏊 競賽管理</div>
+        <div className="nav-tabs">
+          {[
+            {key:'register',label:'選手報名'},
+            {key:'athletes',label:'報名名單',cnt:athletes.length},
+            {key:'heats',label:'分組秩序冊',cnt:heats.length},
+            {key:'results',label:'成績查詢'},
+          ].map(({key,label,cnt})=>(
+            <div key={key} className={`nav-tab${tab===key?' active':''}`} onClick={()=>setTab(key)}>
+              {label}{cnt!==undefined && cnt>0 && <span className="nav-count">{cnt}</span>}
+            </div>
+          ))}
+        </div>
+        <div className="no-print" style={{display:'flex',gap:'.5rem',alignItems:'center',paddingLeft:'1rem'}}>
+          <button className="btn btn-gold btn-sm" onClick={()=>exportExcel(athletes,results)}>⬇ Excel</button>
+        </div>
+      </nav>
+
+      <div className="main">
+        {/* Stats */}
+        <div className="stats-row no-print">
+          <div className="stat-box"><div className="stat-num">{athletes.length}</div><div className="stat-label">報名人數</div></div>
+          <div className="stat-box"><div className="stat-num">{entryCount}</div><div className="stat-label">報名項次</div></div>
+          <div className="stat-box"><div className="stat-num">{heats.length}</div><div className="stat-label">編排組數</div></div>
+          <div className="stat-box"><div className="stat-num">{[...new Set(athletes.map(a=>a.unit))].length}</div><div className="stat-label">參賽單位</div></div>
+          <div className="stat-box"><div className="stat-num">{Object.values(results).filter(v=>v&&v.trim()).length}</div><div className="stat-label">已登錄成績</div></div>
+        </div>
+
+        {tab==='register' && (
+          <>
+            <RegForm onSubmit={addAthlete} />
+            <div style={{marginTop:'1rem'}}>
+              <div className="card">
+                <div className="card-title">📌 操作說明</div>
+                <div style={{color:'var(--gray)',fontSize:'.85rem',lineHeight:1.8}}>
+                  <p>① 各單位教練逐一填寫選手資料並送出報名</p>
+                  <p>② 系統自動依「性別 → 組別 → 項目 → 參考成績」進行分組編排</p>
+                  <p>③ 切換至「分組秩序冊」可查看道次表並輸入實際成績</p>
+                  <p>④ 點選 Excel 匯出完整秩序冊與成績表，或使用列印功能輸出紙本</p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {tab==='athletes' && (
+          <div className="card">
+            <div className="section-header">
+              <div className="section-title">報名名單</div>
+              <button className="btn btn-danger btn-sm no-print" onClick={()=>{if(confirm('確定清除所有報名資料？'))setAthletes([])}}>清除全部</button>
+            </div>
+            <AthleteList athletes={athletes} onDelete={delAthlete} />
+          </div>
+        )}
+
+        {tab==='heats' && (
+          <div className="card">
+            <div className="section-title" style={{marginBottom:'1rem'}}>分組秩序冊 ▸ 道次表</div>
+            <HeatDraw athletes={athletes} results={results} setResults={setResults} />
+          </div>
+        )}
+
+        {tab==='results' && (
+          <div className="card">
+            <div className="section-title" style={{marginBottom:'1rem'}}>成績查詢 ▸ 名次排列</div>
+            <ResultsView athletes={athletes} results={results} />
+          </div>
+        )}
+      </div>
+
+      {toast && <Toast msg={toast} onDone={()=>setToast('')} />}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
